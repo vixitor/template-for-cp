@@ -1,2 +1,2 @@
 # template-for-cp
-algorithms and data structures useful in icic
+algorithms and data structures useful in icpc
