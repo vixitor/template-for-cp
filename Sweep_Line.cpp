@@ -5,90 +5,85 @@
 //  Created by William on 2023/11/8.
 //
 
-#include<bits/stdc++.h>
-using namespace std;
-struct Node
-{
-    int l,r,cnt,len;
-};
-vector<Node> tr;
-struct Segment
-{
-    int x,y1,y2,d;
-};
-vector<Segment> seg;
-vector<int> ys;
-bool cmp(Segment a,Segment b)
-{
-    return a.x < b.x;
-}
-void build(int u,int l,int r)
-{
-    tr[u] = {l,r,0,0};
-    if(l == r)return;
-    int mid = l + r >> 1;
-    build(u * 2,l,mid);
-    build(u * 2 + 1,mid + 1,r);
-}
-int find(int x)
-{
-    return lower_bound(ys.begin(),ys.end(),x) - ys.begin();
-}
-void pushup(int u)
-{
-    if(tr[u].cnt)
-    {
-        tr[u].len = ys[tr[u].r + 1] - ys[tr[u].l];
+#include <iostream>
+#include <algorithm>
+#include <vector>
+struct Sweep_Line {
+public : 
+    struct Node {
+        int l,r;
+        long long sum;
+        int len;
+    };
+    std::vector<Node> tr;
+    std::vector<int> X;
+    struct line{
+        int x1,x2,y,mark;
+    };
+    std::vector<line> lines;
+    void addLine(int x1,int y1,int x2,int y2){
+        X.push_back(x1);
+        X.push_back(x2);
+        if(y1 > y2)std::swap(y1,y2);
+        lines.push_back({x1,x2,y1,1});
+        lines.push_back({x1,x2,y2,-1});
     }
-    else if(tr[u].l != tr[u].r)
-    {
-        tr[u].len = tr[u * 2].len + tr[u * 2 + 1].len;
+    void build(int u,int l,int r){
+        tr[u].l = l,tr[u].r = r;
+        tr[u].sum = tr[u].len = 0;
+        if(l == r)return;
+        int mid = l + r >> 1;
+        build(u << 1,l,mid);
+        build(u << 1 | 1,mid + 1,r);
     }
-    else tr[u].len = 0;
-}
-void modify(int u,int l,int r,int d)
-{
-    if(tr[u].l >= l && tr[u].r <= r)
-    {
-        tr[u].cnt += d;
-        pushup(u);
-    }
-    else
-    {
-        int mid = tr[u].l + tr[u].r >> 1;
-        if(l <= mid)modify(u * 2,l,r,d);
-        if(r > mid)modify(u * 2 + 1,l,r,d);
-        pushup(u);
-    }
-}
-int main()
-{
-    int n;
-    cin>>n;
-    tr.resize(n * 8);
-    for(int i = 0;i < n;i++)
-    {
-        int x1,y1,y2,x2;
-        cin>>x1>>y1>>x2>>y2;
-        seg.push_back({x1,y1,y2,1});
-        seg.push_back({x2,y1,y2,-1});
-        ys.push_back(y1);
-        ys.push_back(y2);
-    }
-    sort(ys.begin(),ys.end());
-    ys.erase(unique(ys.begin(),ys.end()),ys.end());
-    sort(seg.begin(),seg.end(),cmp);
-    build(1,0,ys.size() - 2);
-    long long ans = 0;
-    for(int i = 0;i < seg.size();i++)
-    {
-        if(i)
-        {
-            ans += (long long)tr[1].len * (seg[i].x - seg[i - 1].x);
+    void pushup(int u){
+        if(tr[u].sum){
+            tr[u].len = X[tr[u].r + 1] - X[tr[u].l];
         }
-        modify(1,find(seg[i].y1),find(seg[i].y2) - 1,seg[i].d);
+        else {
+            tr[u].len = tr[u << 1].len + tr[u << 1 | 1].len;
+        }
     }
-    cout<<ans<<endl;
+    void edit(int u,int l,int r,int mark){
+        if(X[tr[u].l] >= r || X[tr[u].r + 1] <= l)return;
+        if(X[tr[u].l] >= l && X[tr[u].r + 1] <= r){
+            tr[u].sum += mark;
+            pushup(u);
+            return;
+        }
+        edit(u << 1,l,r,mark);
+        edit(u << 1 | 1,l,r,mark);
+        pushup(u);
+    }
+    long long work(){
+        sort(X.begin(),X.end());
+        int tot = std::unique(X.begin(),X.end()) - X.begin() - 1;
+        tr.resize(tot * 8);// * 8
+        build(1,0,tot - 1);
+        sort(lines.begin(),lines.end(),[](line a,line b){
+            return a.y < b.y;
+        });
+        long long res = 0;
+        for(int i = 0;i < (int)lines.size() - 1;i++){
+            edit(1,lines[i].x1,lines[i].x2,lines[i].mark);
+            res += 1LL * tr[1].len * (lines[i + 1].y - lines[i].y);
+        }
+        return res;
+    }
+};
+int main() {
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+    std::cout.tie(nullptr);
+    int n;
+    std::cin>>n;
+    Sweep_Line sl;
+    for(int i = 0;i < n;i++){
+        int x1,x2,y1,y2;
+        std::cin>>x1>>y1>>x2>>y2;
+        sl.addLine(x1,y1,x2,y2);
+    }
+    std::cout<<sl.work()<<"\n";
     return 0;
 }
 
